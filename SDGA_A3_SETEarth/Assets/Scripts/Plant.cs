@@ -2,18 +2,19 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Plant : MonoBehaviour {
+public class Plant {
 
+    public float Nutrition;
+    public float Population;
     public float GrowthRate;
     public int RegrowthTime;
+    public int RegrowthTimeLeft;
+    public GameObject Sprite;
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+    public override string ToString()
+    {
+        return "Plant: \n\tNutrition: " + Nutrition.ToString() +
+            "\tPopulation: " + Population.ToString() +
+            "\tReGrowthTimeLeft: " + RegrowthTimeLeft.ToString();
+    }
 }

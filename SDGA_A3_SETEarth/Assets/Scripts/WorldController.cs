@@ -12,45 +12,112 @@ public class WorldController : MonoBehaviour {
     public GameObject[,] tiles;
     private WorldGenerator.TileAttributes[,] baseWorld;
 
+    private int width = 128;
+    private int height = 64;
+
+    private int buffer = 32;
+    private int halfbuffer = 16;
+
     private string dbPath;
+
+    int seed = 8;
+    int flatness = 0;
+    int maxflat = 6; 
+    float nonContinentFacctor = 0.75f;
+    float minNCF = 0.75f;
+
+    struct genproc
+    {
+        public int seed;
+        public int flatness;
+        public float NCF;
+        public string name;
+    }
+
+    List<genproc> gens;
 
     // Use this for initialization
     void Start () {
-
-
-        baseWorld = WorldGenerator.GenerateWorld(30, 20);
-        tiles = new GameObject[StaticData.world_size, StaticData.world_size];
-        for (int i = 0; i < 30; i++)
+        tiles = new GameObject[width, height];
+        gens = new List<genproc>();
+        for (int s = 0; s < 1; s++)
         {
-            for (int j = 0; j < 20; j++)
+            for (int f = 0; f <= 6; f++)
             {
-               if (baseWorld[i,j].height == -2)
+                for (int n = 0; n < 1; n++)
                 {
-                    tiles[i, j] = (GameObject)Instantiate(deep); 
+                    gens.Add(new genproc()
+                    {
+                        seed = s,
+                        flatness = f,
+                        NCF = 0.75f + 0.5f * n,
+                        name = @"C:\Users\mmaxn\Desktop\tg\terrain-gen-" + seed.ToString() + f.ToString() + n.ToString() + ".png"
+                    });
                 }
-               else if (baseWorld[i,j].height == -1)
-                {
-                    tiles[i, j] = (GameObject)Instantiate(shallow);
-                }
-               else if (baseWorld[i,j].height == 1)
-                {
-                    tiles[i, j] = (GameObject)Instantiate(sand);
-                }
-               else
-                {
-                    tiles[i, j] = (GameObject)Instantiate(grass);
-                }
-                tiles[i, j].transform.Translate(new Vector3 ((i - (StaticData.world_size/2)) * StaticData.size_increment, (j - (StaticData.world_size / 2)) * StaticData.size_increment, 0));
             }
         }
-        dbPath = "URI=file:" + Application.persistentDataPath + "/exampleDatabase.db";
+        /*dbPath = "URI=file:" + Application.persistentDataPath + "/exampleDatabase.db";
         Debug.Log(dbPath);
         CreateSchema();
         InsertScore("GG Meade", 3701);
         InsertScore("US Grant", 4242);
         InsertScore("GB McClellan", 107);
-        GetHighScores(10);
+        GetHighScores(10);*/
 
+    }
+
+    private void LateUpdate()
+    {
+        if (gens.Count > 0)
+        {
+            genproc thisgen = gens[0];
+            Randomize(thisgen.seed, thisgen.flatness, thisgen.NCF);
+            ScreenCapture.CaptureScreenshot(thisgen.name);
+            gens.RemoveAt(0);
+        }
+    }
+
+    private void DeleteOld()
+    {
+        for (int i = 0; i < width; i++)
+        {
+            for (int j = 0; j < height; j++)
+            {
+                GameObject.Destroy(tiles[i, j]);
+            }
+        }
+    }
+
+    private void Randomize(int seed, int flatness, float NCF)
+    {
+        baseWorld = WorldGenerator.GenerateWorld(width + buffer, height + buffer, seed, flatness, NCF);
+        for (int i = 0; i < width; i++)
+        {
+            for (int j = 0; j < height; j++)
+            {
+                if (baseWorld[i + halfbuffer, j + halfbuffer].height >= 0.6f)
+                {
+                    tiles[i, j] = (GameObject)Instantiate(deep);
+                }
+                else if (baseWorld[i + halfbuffer, j + halfbuffer].height >= 0.2f)
+                {
+                    tiles[i, j] = (GameObject)Instantiate(shallow);
+                }
+                else if (baseWorld[i + halfbuffer, j + halfbuffer].height >= 0.1f)
+                {
+                    tiles[i, j] = (GameObject)Instantiate(sand);
+                }
+                else
+                {
+                    tiles[i, j] = (GameObject)Instantiate(grass);
+                }
+                tiles[i, j].transform.SetParent(this.transform);
+                tiles[i, j].transform.localPosition = new Vector3(0, 0, 0);
+                tiles[i, j].transform.Translate(new Vector3((i - (width / 2)) * StaticData.size_increment, (j - (height / 2)) * StaticData.size_increment, 0));
+                float dir = (int)Mathf.Round(Random.Range(1.0f, 4.0f));
+                tiles[i, j].transform.Rotate(new Vector3(0, 0, dir * 90));
+            }
+        }
     }
 
     public void CreateSchema()
