@@ -4,6 +4,8 @@ using UnityEngine;
 using LibNoise;
 using LibNoise.Generator;
 using LibNoise.Operator;
+using System.IO;
+using System;
 
 public static class WorldGenerator  {
     public class TileAttributes
@@ -17,10 +19,10 @@ public static class WorldGenerator  {
         }
     }
 
-    public static TileAttributes[,] GenerateWorld(int width, int height, int seed, int flatness, float NCF)
+    public static TileAttributes[,] GenerateWorld(int width, int height, int seed, int flatness, int voronoi_iterations, int voronoi_start)
     {
         TileAttributes[,] World = new TileAttributes[width,height];
-        float[,] heightMap = Generate(width, height, seed, flatness, NCF);
+        float[,] heightMap = Generate(width, height, seed, flatness, voronoi_iterations, voronoi_start);
 
         for (int i = 0; i < width; i++)
         {
@@ -35,44 +37,53 @@ public static class WorldGenerator  {
     }
 
     const int displacement = 4;
-    const int perlin_octaves = 4;
-    public static float[,] Generate(int width, int height, int seed, int flatness, float NCF)
+    const int perlinOctaves = 4;
+    public static float[,] Generate(int width, int height, int seed, int flatness, int voronoi_iterations, int voronoi_start)
     {
         // Create the module network
         ModuleBase moduleBase;
 
-        moduleBase = new Voronoi(2, displacement, seed, false);
+        moduleBase = new RidgedMultifractal();
         Noise2D sound = new Noise2D(width, height, moduleBase);
         sound.GeneratePlanar(
-                0,
-                width,
-                0,
-                height, true);
-        for (int i = 4; i <= 32; i *= 2)
+                -1,
+                1,
+                -1,
+                1, true);
+        
+        for (int i = 0; i <= voronoi_iterations; i++)
         {
             seed++;
-            moduleBase = new Voronoi(i, displacement, seed, false);
-            LayerNoise(sound, moduleBase);
+            ModuleBase tempBase = new Voronoi(voronoi_start + i, displacement, seed, false);
+            Noise2D temp = new Noise2D(width, height, tempBase);
+            temp.GeneratePlanar(
+                -1,
+                1,
+                -1,
+                1, true);
+            //File.WriteAllBytes(Application.dataPath + "/../Gray" + voronoi_start + voronoi_iterations.ToString() + i.ToString() + ".png", temp.GetTexture(GradientPresets.Grayscale).EncodeToPNG());
+            LayerNoise(sound, tempBase);
+            ModuleBase pBase = new Perlin() { OctaveCount = perlinOctaves };
+            LayerNoise(sound, pBase);
         }
 
-        moduleBase = new RidgedMultifractal();
-        LayerNoise(sound, moduleBase);
-        moduleBase = new Perlin() { OctaveCount = perlin_octaves };
-        LayerNoise(sound, moduleBase);
+        File.WriteAllBytes(Application.dataPath + "/../GrayUnflat" + voronoi_start.ToString() + voronoi_iterations.ToString() + ".png", sound.GetTexture(GradientPresets.Grayscale).EncodeToPNG());
 
         Flatten(sound, flatness);
 
-        return sound.GetNormalizedData();
+        File.WriteAllBytes(Application.dataPath + "/../GrayActual" + voronoi_start.ToString() + voronoi_iterations.ToString() + ".png", sound.GetTexture(GradientPresets.Grayscale).EncodeToPNG());
+
+        return sound.GetData();
     }
 
     private static void LayerNoise(Noise2D baseNoise, ModuleBase module)
     {
         Noise2D thisNoise = new Noise2D(baseNoise.Width, baseNoise.Height, module);
         thisNoise.GeneratePlanar(
-            0,
-            baseNoise.Width,
-            0,
-            baseNoise.Height, true);
+            -1,
+            1,
+            -1,
+            1, true);
         AddNoise(baseNoise, thisNoise);
     }
 
@@ -100,7 +111,7 @@ public static class WorldGenerator  {
                 {
                     for (int y = j + (factor * -1); y <= j + factor; y++)
                     {
-                        if (x >= 0 && x < noise.Width && y >= 0 && y < noise.Height && !(x == 0 && y == 0))
+                        if (x >= 0 && x < noise.Width && y >= 0 && y < noise.Height && (x != 0 && y != 0))
                         {
                             total += original[x, y];
                             elements++;

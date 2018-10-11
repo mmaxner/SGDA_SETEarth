@@ -10,17 +10,19 @@ public class WorldController : MonoBehaviour {
     public GameObject sand;
     public GameObject grass;
     public GameObject[,] tiles;
+    private float[] thresh;
+    private GameObject[] desh;
     private WorldGenerator.TileAttributes[,] baseWorld;
 
-    private int width = 128;
-    private int height = 64;
+    private static int size_factor = 6;
+    private int width = (int)System.Math.Pow(2, size_factor+1);
+    private int height = (int)System.Math.Pow(2, size_factor);
 
-    private int buffer = 32;
-    private int halfbuffer = 16;
+    private int buffer = 0;
+    private int halfbuffer = 0;
 
     private string dbPath;
 
-    int seed = 8;
     int flatness = 0;
     int maxflat = 6; 
     float nonContinentFacctor = 0.75f;
@@ -30,28 +32,43 @@ public class WorldController : MonoBehaviour {
     {
         public int seed;
         public int flatness;
-        public float NCF;
+        public int voronoi_iterations;
         public string name;
+        internal int voronoi_start;
     }
 
     List<genproc> gens;
 
     // Use this for initialization
     void Start () {
+        thresh = new float[] { 0.35f, 0.6f, 0.7f, 1.0f };
+        desh = new GameObject[] { deep, shallow, sand, grass };
         tiles = new GameObject[width, height];
+
         gens = new List<genproc>();
+        /*for (int s = 0; s < 32; s++)
+        {
+            gens.Add(new genproc()
+            {
+                seed = s,
+                flatness = 3,
+                voronoi_iterations = 9,
+                name = @"C:\Users\mmaxn\Desktop\tg\terrain-gen-" + s.ToString() + "-PRIME.png"
+            });
+        }*/
         for (int s = 0; s < 1; s++)
         {
-            for (int f = 0; f <= 6; f++)
+            for (int f = 0; f <= height / 3; f +=2 )
             {
-                for (int n = 0; n < 1; n++)
+                for (int x = 0; x < 16; x++)
                 {
                     gens.Add(new genproc()
                     {
                         seed = s,
-                        flatness = f,
-                        NCF = 0.75f + 0.5f * n,
-                        name = @"C:\Users\mmaxn\Desktop\tg\terrain-gen-" + seed.ToString() + f.ToString() + n.ToString() + ".png"
+                        flatness = 3,
+                        voronoi_iterations = x,
+                        voronoi_start = f,
+                        name = @"C:\Users\mmaxn\Desktop\tg\terrain-gen-" + s.ToString() + f.ToString() + x.ToString()+ ".png"
                     });
                 }
             }
@@ -70,10 +87,11 @@ public class WorldController : MonoBehaviour {
     {
         if (gens.Count > 0)
         {
-            genproc thisgen = gens[0];
-            Randomize(thisgen.seed, thisgen.flatness, thisgen.NCF);
+            DeleteOld();
+            genproc thisgen = gens[gens.Count-1];
+            Randomize(thisgen.seed, thisgen.flatness, thisgen.voronoi_iterations, thisgen.voronoi_start);
             ScreenCapture.CaptureScreenshot(thisgen.name);
-            gens.RemoveAt(0);
+            gens.RemoveAt(gens.Count-1);
         }
     }
 
@@ -88,35 +106,47 @@ public class WorldController : MonoBehaviour {
         }
     }
 
-    private void Randomize(int seed, int flatness, float NCF)
+    struct TileObjet
     {
-        baseWorld = WorldGenerator.GenerateWorld(width + buffer, height + buffer, seed, flatness, NCF);
+        public int x;
+        public int y;
+        public float height;
+    }
+
+    private void Randomize(int seed, int flatness, int voronoi_iterations, int voronoi_start)
+    {
+        baseWorld = WorldGenerator.GenerateWorld(width + buffer, height + buffer, seed, flatness, voronoi_iterations, voronoi_start);
+        List<TileObjet> sorter = new List<TileObjet>();
         for (int i = 0; i < width; i++)
         {
             for (int j = 0; j < height; j++)
             {
-                if (baseWorld[i + halfbuffer, j + halfbuffer].height >= 0.6f)
+                sorter.Add(new TileObjet()
                 {
-                    tiles[i, j] = (GameObject)Instantiate(deep);
-                }
-                else if (baseWorld[i + halfbuffer, j + halfbuffer].height >= 0.2f)
-                {
-                    tiles[i, j] = (GameObject)Instantiate(shallow);
-                }
-                else if (baseWorld[i + halfbuffer, j + halfbuffer].height >= 0.1f)
-                {
-                    tiles[i, j] = (GameObject)Instantiate(sand);
-                }
-                else
-                {
-                    tiles[i, j] = (GameObject)Instantiate(grass);
-                }
-                tiles[i, j].transform.SetParent(this.transform);
-                tiles[i, j].transform.localPosition = new Vector3(0, 0, 0);
-                tiles[i, j].transform.Translate(new Vector3((i - (width / 2)) * StaticData.size_increment, (j - (height / 2)) * StaticData.size_increment, 0));
-                float dir = (int)Mathf.Round(Random.Range(1.0f, 4.0f));
-                tiles[i, j].transform.Rotate(new Vector3(0, 0, dir * 90));
+                    x = i,
+                    y = j,
+                    height = baseWorld[i + halfbuffer, j + halfbuffer].height
+                });
             }
+        }
+        sorter.Sort((x, y) => x.height.CompareTo(y.height));
+
+        int tileIndex = 0;
+        for (int i = 0; i < desh.Length; i++)
+        {
+            do
+            {
+                TileObjet thisTile = sorter[tileIndex];
+                tiles[thisTile.x, thisTile.y] = GameObject.Instantiate(desh[i]);
+
+                tiles[thisTile.x, thisTile.y].transform.SetParent(this.transform);
+                tiles[thisTile.x, thisTile.y].transform.localPosition = new Vector3((thisTile.x - (width / 2)) * StaticData.size_increment, (thisTile.y - (height / 2)) * StaticData.size_increment, 0);
+                
+                float dir = (int)Mathf.Round(Random.Range(1.0f, 4.0f));
+                //tiles[thisTile.x, thisTile.y].transform.Rotate(new Vector3(0, 0, dir * 90));
+
+                tileIndex++;
+            } while (tileIndex < sorter.Count && tileIndex < (thresh[i] * sorter.Count));
         }
     }
 
