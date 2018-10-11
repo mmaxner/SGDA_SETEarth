@@ -233,6 +233,11 @@ MonoBehaviour:
   shallow: {fileID: 1119173220462756, guid: 9c8d514f38519f7449f6b5e76bb29bf9, type: 2}
   sand: {fileID: 1736566698027576, guid: 11005adc5d49247468849f919e82d7f5, type: 2}
   grass: {fileID: 1771302282751174, guid: bcd36137cea03234b9d418d2bb9c8723, type: 2}
+  seed: 1992
+  size_factor: 7
+  flatness: 2
+  voronoi_iterations: 25
+  voronoi_start: 3
 --- !u!4 &892234168
 Transform:
   m_ObjectHideFlags: 0

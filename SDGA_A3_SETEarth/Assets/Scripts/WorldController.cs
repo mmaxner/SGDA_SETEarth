@@ -14,19 +14,17 @@ public class WorldController : MonoBehaviour {
     private GameObject[] desh;
     private WorldGenerator.TileAttributes[,] baseWorld;
 
-    private static int size_factor = 6;
-    private int width = (int)System.Math.Pow(2, size_factor+1);
-    private int height = (int)System.Math.Pow(2, size_factor);
+    public int seed;
+    public int size_factor;
+    public int flatness;
+    public int voronoi_iterations;
+    public int voronoi_start;
 
-    private int buffer = 0;
-    private int halfbuffer = 0;
+
+    private int width;
+    private int height;
 
     private string dbPath;
-
-    int flatness = 0;
-    int maxflat = 6; 
-    float nonContinentFacctor = 0.75f;
-    float minNCF = 0.75f;
 
     struct genproc
     {
@@ -34,18 +32,22 @@ public class WorldController : MonoBehaviour {
         public int flatness;
         public int voronoi_iterations;
         public string name;
-        internal int voronoi_start;
+        public int voronoi_start;
     }
 
     List<genproc> gens;
 
     // Use this for initialization
     void Start () {
+        width = (int)System.Math.Pow(2, size_factor + 1);
+        height = (int)System.Math.Pow(2, size_factor);
         thresh = new float[] { 0.35f, 0.6f, 0.7f, 1.0f };
         desh = new GameObject[] { deep, shallow, sand, grass };
         tiles = new GameObject[width, height];
 
-        gens = new List<genproc>();
+        Randomize(seed, flatness, voronoi_iterations, voronoi_start);
+
+        //gens = new List<genproc>();
         /*for (int s = 0; s < 32; s++)
         {
             gens.Add(new genproc()
@@ -56,7 +58,7 @@ public class WorldController : MonoBehaviour {
                 name = @"C:\Users\mmaxn\Desktop\tg\terrain-gen-" + s.ToString() + "-PRIME.png"
             });
         }*/
-        for (int s = 0; s < 1; s++)
+        /*for (int s = 0; s < 1; s++)
         {
             for (int f = 0; f <= height / 3; f +=2 )
             {
@@ -72,7 +74,7 @@ public class WorldController : MonoBehaviour {
                     });
                 }
             }
-        }
+        }*/
         /*dbPath = "URI=file:" + Application.persistentDataPath + "/exampleDatabase.db";
         Debug.Log(dbPath);
         CreateSchema();
@@ -83,7 +85,7 @@ public class WorldController : MonoBehaviour {
 
     }
 
-    private void LateUpdate()
+   /*private void LateUpdate()
     {
         if (gens.Count > 0)
         {
@@ -93,7 +95,7 @@ public class WorldController : MonoBehaviour {
             ScreenCapture.CaptureScreenshot(thisgen.name);
             gens.RemoveAt(gens.Count-1);
         }
-    }
+    }*/
 
     private void DeleteOld()
     {
@@ -115,7 +117,7 @@ public class WorldController : MonoBehaviour {
 
     private void Randomize(int seed, int flatness, int voronoi_iterations, int voronoi_start)
     {
-        baseWorld = WorldGenerator.GenerateWorld(width + buffer, height + buffer, seed, flatness, voronoi_iterations, voronoi_start);
+        baseWorld = WorldGenerator.GenerateWorld(width, height, seed, flatness, voronoi_iterations, voronoi_start);
         List<TileObjet> sorter = new List<TileObjet>();
         for (int i = 0; i < width; i++)
         {
@@ -125,7 +127,7 @@ public class WorldController : MonoBehaviour {
                 {
                     x = i,
                     y = j,
-                    height = baseWorld[i + halfbuffer, j + halfbuffer].height
+                    height = baseWorld[i, j].height
                 });
             }
         }
@@ -143,7 +145,7 @@ public class WorldController : MonoBehaviour {
                 tiles[thisTile.x, thisTile.y].transform.localPosition = new Vector3((thisTile.x - (width / 2)) * StaticData.size_increment, (thisTile.y - (height / 2)) * StaticData.size_increment, 0);
                 
                 float dir = (int)Mathf.Round(Random.Range(1.0f, 4.0f));
-                //tiles[thisTile.x, thisTile.y].transform.Rotate(new Vector3(0, 0, dir * 90));
+                tiles[thisTile.x, thisTile.y].transform.Rotate(new Vector3(0, 0, dir * 90));
 
                 tileIndex++;
             } while (tileIndex < sorter.Count && tileIndex < (thresh[i] * sorter.Count));
