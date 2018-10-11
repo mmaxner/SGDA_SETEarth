@@ -10,9 +10,9 @@ public class WorldController : MonoBehaviour {
     public GameObject sand;
     public GameObject grass;
     public GameObject[,] tiles;
-    private float[] thresh;
-    private GameObject[] desh;
-    private WorldGenerator.TileAttributes[,] baseWorld;
+    private float[] tileTypeAmountThreshold;
+    private GameObject[] tileTypes;
+    private float[,] baseWorld;
 
     public int seed;
     public int size_factor;
@@ -20,9 +20,17 @@ public class WorldController : MonoBehaviour {
     public int voronoi_iterations;
     public int voronoi_start;
 
+    public float water_weight;
+    public float shallow_water_weight;
+    public float coast_weight;
+    public float land_weight;
+
+    public bool large_preview = false;
 
     private int width;
     private int height;
+
+    public CameraController camera;
 
     private string dbPath;
 
@@ -39,13 +47,10 @@ public class WorldController : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
-        width = (int)System.Math.Pow(2, size_factor + 1);
-        height = (int)System.Math.Pow(2, size_factor);
-        thresh = new float[] { 0.35f, 0.6f, 0.7f, 1.0f };
-        desh = new GameObject[] { deep, shallow, sand, grass };
-        tiles = new GameObject[width, height];
+        tileTypes = new GameObject[] { deep, shallow, sand, grass };
+        tileTypeAmountThreshold = new float[tileTypes.Length];
 
-        Randomize(seed, flatness, voronoi_iterations, voronoi_start);
+       // Randomize(seed, flatness, voronoi_iterations, voronoi_start);
 
         //gens = new List<genproc>();
         /*for (int s = 0; s < 32; s++)
@@ -99,56 +104,81 @@ public class WorldController : MonoBehaviour {
 
     private void DeleteOld()
     {
-        for (int i = 0; i < width; i++)
+        try
         {
-            for (int j = 0; j < height; j++)
+            for (int i = 0; i < width; i++)
             {
-                GameObject.Destroy(tiles[i, j]);
+                for (int j = 0; j < height; j++)
+                {
+                    GameObject.Destroy(tiles[i, j]);
+                }
             }
+        }
+        catch
+        {
+
         }
     }
 
-    struct TileObjet
+    struct TileObject
     {
         public int x;
         public int y;
         public float height;
     }
 
-    private void Randomize(int seed, int flatness, int voronoi_iterations, int voronoi_start)
+    public void Randomize()
     {
-        baseWorld = WorldGenerator.GenerateWorld(width, height, seed, flatness, voronoi_iterations, voronoi_start);
-        List<TileObjet> sorter = new List<TileObjet>();
+        DeleteOld();
+        width = (int)System.Math.Pow(2, size_factor + 1);
+        height = (int)System.Math.Pow(2, size_factor);
+
+        camera.SizeTo(width, height);
+
+        float weight_total = water_weight + shallow_water_weight + coast_weight + land_weight;
+        tileTypeAmountThreshold[0] = water_weight / weight_total;
+        tileTypeAmountThreshold[1] = tileTypeAmountThreshold[0] + shallow_water_weight / weight_total;
+        tileTypeAmountThreshold[2] = tileTypeAmountThreshold[1] + coast_weight / weight_total;
+        tileTypeAmountThreshold[3] = 1.0f;// (float)land_weight / (float)weight_total;
+
+        Debug.Log("total: " + weight_total + ", water: " + tileTypeAmountThreshold[0] + ", shallow: " + tileTypeAmountThreshold[1] + ", coastal: " + tileTypeAmountThreshold[2] + ", land: " + tileTypeAmountThreshold[3]);
+
+        tiles = new GameObject[width, height];
+
+        Debug.Log("width: " + width + ", height: " + height + ", seed: " + seed + ", flatness: " + flatness + ", voronoi iterations: " + voronoi_iterations + ", voronoi start: " + voronoi_start);
+
+        baseWorld = HeightMapGenerator.GenerateWorld(width, height, seed, flatness, voronoi_iterations, voronoi_start);
+        List<TileObject> sorter = new List<TileObject>();
         for (int i = 0; i < width; i++)
         {
             for (int j = 0; j < height; j++)
             {
-                sorter.Add(new TileObjet()
+                sorter.Add(new TileObject()
                 {
                     x = i,
                     y = j,
-                    height = baseWorld[i, j].height
+                    height = baseWorld[i, j]
                 });
             }
         }
         sorter.Sort((x, y) => x.height.CompareTo(y.height));
 
         int tileIndex = 0;
-        for (int i = 0; i < desh.Length; i++)
+        for (int i = 0; i < tileTypes.Length && tileIndex < sorter.Count; i++)
         {
             do
             {
-                TileObjet thisTile = sorter[tileIndex];
-                tiles[thisTile.x, thisTile.y] = GameObject.Instantiate(desh[i]);
+                TileObject thisTile = sorter[tileIndex];
+                tiles[thisTile.x, thisTile.y] = GameObject.Instantiate(tileTypes[i]);
 
                 tiles[thisTile.x, thisTile.y].transform.SetParent(this.transform);
                 tiles[thisTile.x, thisTile.y].transform.localPosition = new Vector3((thisTile.x - (width / 2)) * StaticData.size_increment, (thisTile.y - (height / 2)) * StaticData.size_increment, 0);
                 
                 float dir = (int)Mathf.Round(Random.Range(1.0f, 4.0f));
-                tiles[thisTile.x, thisTile.y].transform.Rotate(new Vector3(0, 0, dir * 90));
+                //tiles[thisTile.x, thisTile.y].transform.Rotate(new Vector3(0, 0, dir * 90));
 
                 tileIndex++;
-            } while (tileIndex < sorter.Count && tileIndex < (thresh[i] * sorter.Count));
+            } while (tileIndex < sorter.Count && tileIndex < (tileTypeAmountThreshold[i] * sorter.Count));
         }
     }
 
@@ -230,5 +260,64 @@ public class WorldController : MonoBehaviour {
                 Debug.Log("scores (end)");
             }
         }
+    }
+
+    public void SetSize(float value)
+    {
+        size_factor = (int)value;
+    }
+
+    public void SetFlatness(float value)
+    {
+        flatness = (int)value;
+    }
+
+    public void SetSeed(float value)
+    {
+        seed = (int)value;
+    }
+
+    public void SetIterations(float value)
+    {
+        voronoi_iterations = (int)value;
+    }
+
+    // watch out for this, maybe find a better UI label and make it exactly what the value is ??
+    public void SetStart(float value)
+    {
+        voronoi_start = 10 - (int)value;
+    }
+
+    public void SetWaterWeight(float value)
+    {
+        water_weight = value;
+    }
+
+    public void SetShallowWeight(float value)
+    {
+        shallow_water_weight = value;
+    }
+
+    public void SetCoastWeight(float value)
+    {
+        coast_weight = value;
+    }
+
+    public void SetLandWeight(float value)
+    {
+        land_weight = value;
+    }
+
+    public void SetLargePreview(bool isLarge)
+    {
+        large_preview = isLarge;
+    }
+
+    public void PreviewMapSettings(float lol_jk = 0.0f)
+    {
+        int actual_size = size_factor;
+        size_factor = large_preview ? 5 : 4;
+        Randomize();
+        size_factor = actual_size;
     }
 }

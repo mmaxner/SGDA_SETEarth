@@ -51,4 +51,10 @@ public class CameraController : MonoBehaviour {
             cam.orthographicSize -= zoom_speed * (cam.orthographicSize / original_size);
         }
     }
+
+    public void SizeTo(int width, int height)
+    {
+        transform.position = new Vector3(0,-0.5f * StaticData.size_increment,transform.position.z);
+        cam.orthographicSize = (height * StaticData.size_increment) / 2;
+    }
 }

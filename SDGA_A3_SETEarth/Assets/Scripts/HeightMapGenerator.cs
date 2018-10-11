@@ -7,33 +7,12 @@ using LibNoise.Operator;
 using System.IO;
 using System;
 
-public static class WorldGenerator  {
-    public class TileAttributes
+public static class HeightMapGenerator  {
+    public static float[,] GenerateWorld(int width, int height, int seed, int flatness, int voronoi_iterations, int voronoi_start)
     {
-        public float height;
-        public bool dry;
-
-        public TileAttributes(int Height = 0, bool Dry = false)
-        {
-            height = Height;
-        }
-    }
-
-    public static TileAttributes[,] GenerateWorld(int width, int height, int seed, int flatness, int voronoi_iterations, int voronoi_start)
-    {
-        TileAttributes[,] World = new TileAttributes[width,height];
         float[,] heightMap = Generate(width, height, seed, flatness, voronoi_iterations, voronoi_start);
 
-        for (int i = 0; i < width; i++)
-        {
-            for (int j = 0; j < height; j++)
-            {
-                World[i, j] = new TileAttributes();
-                World[i, j].height = heightMap[i, j];
-            }
-        }
-
-        return World;
+        return heightMap;
     }
 
     const int displacement = 4;
@@ -61,17 +40,11 @@ public static class WorldGenerator  {
                 1,
                 -1,
                 1, true);
-            //File.WriteAllBytes(Application.dataPath + "/../Gray" + voronoi_start + voronoi_iterations.ToString() + i.ToString() + ".png", temp.GetTexture(GradientPresets.Grayscale).EncodeToPNG());
             LayerNoise(sound, tempBase);
             ModuleBase pBase = new Perlin() { OctaveCount = perlinOctaves };
             LayerNoise(sound, pBase);
         }
-
-        File.WriteAllBytes(Application.dataPath + "/../GrayUnflat" + voronoi_start.ToString() + voronoi_iterations.ToString() + ".png", sound.GetTexture(GradientPresets.Grayscale).EncodeToPNG());
-
         Flatten(sound, flatness);
-
-        File.WriteAllBytes(Application.dataPath + "/../GrayActual" + voronoi_start.ToString() + voronoi_iterations.ToString() + ".png", sound.GetTexture(GradientPresets.Grayscale).EncodeToPNG());
 
         return sound.GetData();
     }
