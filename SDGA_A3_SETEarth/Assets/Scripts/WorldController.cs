@@ -9,6 +9,12 @@ public class WorldController : MonoBehaviour {
     public GameObject shallow;
     public GameObject sand;
     public GameObject grass;
+    public GameObject hill;
+    public GameObject mountain;
+
+    public float hillStart = 0.875f;
+    public float mountainStart = 0.95f;
+
     public GameObject[,] tiles;
     private float[] tileTypeAmountThreshold;
     private GameObject[] tileTypes;
@@ -175,7 +181,20 @@ public class WorldController : MonoBehaviour {
                 tiles[thisTile.x, thisTile.y].transform.localPosition = new Vector3((thisTile.x - (width / 2)) * StaticData.size_increment, (thisTile.y - (height / 2)) * StaticData.size_increment, 0);
                 
                 float dir = (int)Mathf.Round(Random.Range(1.0f, 4.0f));
-                //tiles[thisTile.x, thisTile.y].transform.Rotate(new Vector3(0, 0, dir * 90));
+                tiles[thisTile.x, thisTile.y].transform.Rotate(new Vector3(0, 0, dir * 90));
+
+                if (tileIndex > mountainStart * sorter.Count)
+                {
+                    GameObject mount = GameObject.Instantiate(mountain);
+                    mount.transform.SetParent(this.transform);
+                    mount.transform.localPosition = new Vector3((thisTile.x - (width / 2)) * StaticData.size_increment, (thisTile.y - (height / 2)) * StaticData.size_increment, mount.transform.position.z);
+                }
+                else if (tileIndex > hillStart * sorter.Count)
+                {
+                    GameObject hi = GameObject.Instantiate(hill);
+                    hi.transform.SetParent(this.transform);
+                    hi.transform.localPosition = new Vector3((thisTile.x - (width / 2)) * StaticData.size_increment, (thisTile.y - (height / 2)) * StaticData.size_increment, hi.transform.position.z);
+                }
 
                 tileIndex++;
             } while (tileIndex < sorter.Count && tileIndex < (tileTypeAmountThreshold[i] * sorter.Count));
