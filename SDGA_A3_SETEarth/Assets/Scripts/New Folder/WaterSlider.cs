@@ -14,7 +14,6 @@ public class WaterSlider : MonoBehaviour
     {
         slider = GetComponent<Slider>();
         slider.onValueChanged.AddListener(world.SetWaterWeight);
-        slider.onValueChanged.AddListener(world.PreviewMapSettings);
         world.SetWaterWeight(slider.value);
     }
 }

@@ -13,7 +13,6 @@ public class VoronoiStartSlider : MonoBehaviour {
     {
         slider = GetComponent<Slider>();
         slider.onValueChanged.AddListener(world.SetStart);
-        slider.onValueChanged.AddListener(world.PreviewMapSettings);
         world.SetStart(slider.value);
     }
 }

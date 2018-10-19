@@ -17,7 +17,7 @@ public class WorldController : MonoBehaviour {
 
     public GameObject[,] tiles;
     private float[] tileTypeAmountThreshold;
-    private GameObject[] tileTypes;
+    private TileTerrainData[] tileTypes;
     private float[,] baseWorld;
 
     public int seed;
@@ -36,9 +36,13 @@ public class WorldController : MonoBehaviour {
     private int width;
     private int height;
 
+    private const int initial_nutrition_amount = 100;
+
     public CameraController camera;
 
     private string dbPath;
+
+    private WorldManager manager;
 
     struct genproc
     {
@@ -51,10 +55,55 @@ public class WorldController : MonoBehaviour {
 
     List<genproc> gens;
 
+    private class TileTerrainData
+    {
+        public GameObject sprite;
+        public TerrainTile.TerrainType type;
+        public float chance_of_nutrition;
+        public float chance_of_herbivore;
+        public float chance_of_carnivore;
+    }
+
     // Use this for initialization
     void Start () {
-        tileTypes = new GameObject[] { deep, shallow, sand, grass };
+        tileTypes = new TileTerrainData[4]
+        {
+            new TileTerrainData()
+            {
+                sprite = deep,
+                type = TerrainTile.TerrainType.OCEAN,
+                chance_of_nutrition = 0.0f,
+                chance_of_herbivore = 0.0f,
+                chance_of_carnivore = 0.0f
+            },
+            new TileTerrainData()
+            {
+                sprite = shallow,
+                type = TerrainTile.TerrainType.SHALLOWOCEAN,
+                chance_of_nutrition = 0.0f,
+                chance_of_herbivore = 0.0f,
+                chance_of_carnivore = 0.0f
+            },
+            new TileTerrainData()
+            {
+                sprite = sand,
+                type = TerrainTile.TerrainType.COAST,
+                chance_of_nutrition = 0.25f,
+                chance_of_herbivore = 0.1f,
+                chance_of_carnivore = 0.0125f
+            },
+            new TileTerrainData()
+            {
+                sprite = grass,
+                type = TerrainTile.TerrainType.MAINLAND,
+                chance_of_nutrition = 0.75f,
+                chance_of_herbivore = 0.15f,
+                chance_of_carnivore = 0.05f
+            }
+        };
         tileTypeAmountThreshold = new float[tileTypes.Length];
+
+        manager = GetComponent<WorldManager>();
 
        // Randomize(seed, flatness, voronoi_iterations, voronoi_start);
 
@@ -133,7 +182,7 @@ public class WorldController : MonoBehaviour {
         public float height;
     }
 
-    public void Randomize()
+    public void Randomize(bool isPreview = false)
     {
         DeleteOld();
         width = (int)System.Math.Pow(2, size_factor + 1);
@@ -145,16 +194,15 @@ public class WorldController : MonoBehaviour {
         tileTypeAmountThreshold[0] = water_weight / weight_total;
         tileTypeAmountThreshold[1] = tileTypeAmountThreshold[0] + shallow_water_weight / weight_total;
         tileTypeAmountThreshold[2] = tileTypeAmountThreshold[1] + coast_weight / weight_total;
-        tileTypeAmountThreshold[3] = 1.0f;// (float)land_weight / (float)weight_total;
-
-        Debug.Log("total: " + weight_total + ", water: " + tileTypeAmountThreshold[0] + ", shallow: " + tileTypeAmountThreshold[1] + ", coastal: " + tileTypeAmountThreshold[2] + ", land: " + tileTypeAmountThreshold[3]);
+        tileTypeAmountThreshold[3] = 1.0f;
 
         tiles = new GameObject[width, height];
 
-        Debug.Log("width: " + width + ", height: " + height + ", seed: " + seed + ", flatness: " + flatness + ", voronoi iterations: " + voronoi_iterations + ", voronoi start: " + voronoi_start);
-
         baseWorld = HeightMapGenerator.GenerateWorld(width, height, seed, flatness, voronoi_iterations, voronoi_start);
         List<TileObject> sorter = new List<TileObject>();
+        TerrainTile[,] terrain = new TerrainTile[width, height];
+        List<Vector2> initial_herbivores = new List<Vector2>();
+        List<Vector2> initial_carnivores = new List<Vector2>();
         for (int i = 0; i < width; i++)
         {
             for (int j = 0; j < height; j++)
@@ -172,32 +220,38 @@ public class WorldController : MonoBehaviour {
         int tileIndex = 0;
         for (int i = 0; i < tileTypes.Length && tileIndex < sorter.Count; i++)
         {
+            TileTerrainData tileData = tileTypes[i];
             do
             {
                 TileObject thisTile = sorter[tileIndex];
-                tiles[thisTile.x, thisTile.y] = GameObject.Instantiate(tileTypes[i]);
+                
+                tiles[thisTile.x, thisTile.y] = GameObject.Instantiate(tileData.sprite);
 
                 tiles[thisTile.x, thisTile.y].transform.SetParent(this.transform);
-                tiles[thisTile.x, thisTile.y].transform.localPosition = new Vector3((thisTile.x - (width / 2)) * StaticData.size_increment, (thisTile.y - (height / 2)) * StaticData.size_increment, 0);
-                
+                tiles[thisTile.x, thisTile.y].transform.localPosition = new Vector3((thisTile.x - (width / 2)) * StaticData.size_increment, (thisTile.y - (height / 2)) * StaticData.size_increment, 1);
+                 
                 float dir = (int)Mathf.Round(Random.Range(1.0f, 4.0f));
                 tiles[thisTile.x, thisTile.y].transform.Rotate(new Vector3(0, 0, dir * 90));
 
-                if (tileIndex > mountainStart * sorter.Count)
+                terrain[thisTile.x, thisTile.y] = new TerrainTile(thisTile.height, 15, tileData.type, new Vector2(thisTile.x, thisTile.y));
+                terrain[thisTile.x, thisTile.y].nutrition = Random.value < tileData.chance_of_nutrition ? initial_nutrition_amount : 0;
+                if (Random.value < tileData.chance_of_herbivore)
                 {
-                    GameObject mount = GameObject.Instantiate(mountain);
-                    mount.transform.SetParent(this.transform);
-                    mount.transform.localPosition = new Vector3((thisTile.x - (width / 2)) * StaticData.size_increment, (thisTile.y - (height / 2)) * StaticData.size_increment, mount.transform.position.z);
+                    initial_herbivores.Add(new Vector2(thisTile.x, thisTile.y));
                 }
-                else if (tileIndex > hillStart * sorter.Count)
+
+                if (Random.value < tileData.chance_of_carnivore)
                 {
-                    GameObject hi = GameObject.Instantiate(hill);
-                    hi.transform.SetParent(this.transform);
-                    hi.transform.localPosition = new Vector3((thisTile.x - (width / 2)) * StaticData.size_increment, (thisTile.y - (height / 2)) * StaticData.size_increment, hi.transform.position.z);
+                    initial_carnivores.Add(new Vector2(thisTile.x, thisTile.y));
                 }
 
                 tileIndex++;
             } while (tileIndex < sorter.Count && tileIndex < (tileTypeAmountThreshold[i] * sorter.Count));
+        }
+
+        if (!isPreview)
+        {
+            manager.SetWorld(terrain, initial_herbivores, initial_carnivores);
         }
     }
 
@@ -327,16 +381,13 @@ public class WorldController : MonoBehaviour {
         land_weight = value;
     }
 
-    public void SetLargePreview(bool isLarge)
+    public void GenerateMap()
     {
-        large_preview = isLarge;
+        Randomize(false);
     }
 
     public void PreviewMapSettings(float lol_jk = 0.0f)
     {
-        int actual_size = size_factor;
-        size_factor = large_preview ? 5 : 4;
-        Randomize();
-        size_factor = actual_size;
+        Randomize(true);
     }
 }

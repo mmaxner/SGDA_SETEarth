@@ -14,7 +14,6 @@ public class CoastSlider : MonoBehaviour
     {
         slider = GetComponent<Slider>();
         slider.onValueChanged.AddListener(world.SetCoastWeight);
-        slider.onValueChanged.AddListener(world.PreviewMapSettings);
         world.SetCoastWeight(slider.value);
     }
 }

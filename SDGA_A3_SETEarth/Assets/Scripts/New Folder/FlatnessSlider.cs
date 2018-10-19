@@ -13,7 +13,6 @@ public class FlatnessSlider : MonoBehaviour {
     {
         slider = GetComponent<Slider>();
         slider.onValueChanged.AddListener(world.SetFlatness);
-        slider.onValueChanged.AddListener(world.PreviewMapSettings);
         world.SetFlatness(slider.value);
     }
 }

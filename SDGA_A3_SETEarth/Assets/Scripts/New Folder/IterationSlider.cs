@@ -13,7 +13,6 @@ public class IterationSlider : MonoBehaviour {
     {
         slider = GetComponent<Slider>();
         slider.onValueChanged.AddListener(world.SetIterations);
-        slider.onValueChanged.AddListener(world.PreviewMapSettings);
         world.SetIterations(slider.value);
     }
 }

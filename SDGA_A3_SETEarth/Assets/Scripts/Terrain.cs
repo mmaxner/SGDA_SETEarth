@@ -26,13 +26,18 @@ public class TerrainTile {
     public List<Herbivore> grazers;
     public List<Carnivore> predators;
     public float available_meat;
+    public Vector2 location;
 
     private static float min_viable_temperature = -5;
     private static float max_viable_temperature = 40;
     private static int regrowth_time = 5;
+    private static float max_plants = 10000;
 
-    public TerrainTile()
+    public TerrainTile(float height_in, float temperature_in,TerrainType type_in, Vector2 location_in)
     {
+        height = height_in;
+        temperature = temperature_in;
+        type = type_in;
         growth_rate = 0;
         if ((type & TerrainTile.TerrainType.LAND) > 0)
         {
@@ -46,6 +51,12 @@ public class TerrainTile {
         {
             growth_rate += 0.1f;
         }
+        grazers = new List<Herbivore>();
+        predators = new List<Carnivore>();
+        available_meat = 0;
+        nutrition = 0;
+        regrowth_left = 0;
+        location = location_in;
     }
 
     public void Reset()
@@ -67,6 +78,10 @@ public class TerrainTile {
             nutrition = 100;
         }
         nutrition += nutrition * growth_rate;
+        if (nutrition > max_plants)
+        {
+            nutrition = max_plants;
+        }
     }
 
     public float EatPlants(float appetite)
@@ -82,9 +97,10 @@ public class TerrainTile {
         }
         else
         {
+            float available = nutrition;
             nutrition = 0;
             regrowth_left = regrowth_time;
-            return nutrition;
+            return available;
         }
     }
 

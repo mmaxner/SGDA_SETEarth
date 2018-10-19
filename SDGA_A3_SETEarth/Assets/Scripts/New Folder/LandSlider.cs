@@ -14,7 +14,6 @@ public class LandSlider : MonoBehaviour
     {
         slider = GetComponent<Slider>();
         slider.onValueChanged.AddListener(world.SetLandWeight);
-        slider.onValueChanged.AddListener(world.PreviewMapSettings);
         world.SetLandWeight(slider.value);
     }
 }

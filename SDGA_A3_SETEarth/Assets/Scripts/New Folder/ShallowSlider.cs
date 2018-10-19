@@ -14,7 +14,6 @@ public class ShallowSlider : MonoBehaviour
     {
         slider = GetComponent<Slider>();
         slider.onValueChanged.AddListener(world.SetShallowWeight);
-        slider.onValueChanged.AddListener(world.PreviewMapSettings);
         world.SetShallowWeight(slider.value);
     }
 }
