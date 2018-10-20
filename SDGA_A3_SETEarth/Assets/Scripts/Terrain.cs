@@ -25,13 +25,12 @@ public class TerrainTile {
     public TerrainType type;
     public List<Herbivore> grazers;
     public List<Carnivore> predators;
-    public float available_meat;
     public Vector2 location;
 
     private static float min_viable_temperature = -5;
     private static float max_viable_temperature = 40;
     private static int regrowth_time = 5;
-    private static float max_plants = 10000;
+    private static float max_plants = 1000;
 
     public TerrainTile(float height_in, float temperature_in,TerrainType type_in, Vector2 location_in)
     {
@@ -53,15 +52,18 @@ public class TerrainTile {
         }
         grazers = new List<Herbivore>();
         predators = new List<Carnivore>();
-        available_meat = 0;
         nutrition = 0;
         regrowth_left = 0;
         location = location_in;
     }
 
+    public TerrainTile()
+    {
+
+    }
+
     public void Reset()
     {
-        available_meat = 0;
         grazers.Clear();
         predators.Clear();
     }

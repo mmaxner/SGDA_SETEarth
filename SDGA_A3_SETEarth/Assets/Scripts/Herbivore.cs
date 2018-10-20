@@ -14,7 +14,7 @@ public class Herbivore : Animal {
         {
             movement = 1.0f,
             perception = 1.0f,
-            fertility = 0.15f,
+            fertility = 0.275f,
             food_efficiency = 0.1f,
             starvation_threshold = 10,
             size = 1.0f,

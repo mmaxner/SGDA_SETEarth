@@ -12,8 +12,5 @@ public static class StaticData {
     public static int voronoi_iterations;
     public static int voronoi_start;
 
-    public static void ReadFromHUD()
-    {
-
-    }
+    public static string dbPath = "URI=file:" + Application.persistentDataPath + "/exampleDatabase.db";
 }

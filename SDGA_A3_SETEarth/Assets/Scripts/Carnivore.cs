@@ -4,25 +4,22 @@ using UnityEngine;
 
 public class Carnivore : Animal {
     public float last_meal_size;
-    public static float hunt_chance = 0.9f;
+    public static float hunt_chance = 1.0f;
     public static float meal_bonus_increment = 5;
     public static float meal_bonus = 0.9f;
-    public float size;
-    //public float 
 
     public static Carnivore CreateBasicCarnivore(Vector2 where, Vector2 tile_offset, GameObject apperance, Transform parent)
     {
         Carnivore carny = new Carnivore()
         {
-            movement = 3.0f,
-            perception = 3.0f,
-            fertility = 0.05f,
+            movement = 2.0f,
+            perception = 2.0f,
+            fertility = 0.2f,
             starvation_threshold = 1,
             location = where,
             sprite = GameObject.Instantiate(apperance),
             last_meal_size = 0,
             isAlive = true,
-            size = 1,
             population = 2
         };
 
@@ -99,7 +96,7 @@ public class Carnivore : Animal {
 
     public int Reproduce()
     {
-        if (population >= 2)
+        if (population >= 2 || true)
         {
             float value = Random.value;
             if (value < fertility)

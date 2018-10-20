@@ -11,6 +11,11 @@ public class WorldManager : MonoBehaviour {
     public GameObject HerbSprite;
     public GameObject CarnSprite;
 
+    public GameObject OceanSprite;
+    public GameObject CoastSprite;
+    public GameObject ShallowSprite;
+    public GameObject LandSprite;
+
     public MaxValueReader max_plants;
     public MaxValueReader max_herbivores;
     public MaxValueReader max_carnivores;
@@ -22,8 +27,11 @@ public class WorldManager : MonoBehaviour {
     public CurrentValueReader current_minimum_plants;
     Vector2 sprite_offset;
 
-    public void SetWorld(TerrainTile[,] terrainTiles, List<Vector2> initial_herbivores, List<Vector2> initial_carnivores)
+    public int size_factor;
+
+    public void SetWorld(TerrainTile[,] terrainTiles, List<Vector2> initial_herbivores, List<Vector2> initial_carnivores, int size_factor_in)
     {
+        size_factor = size_factor_in;
         world = terrainTiles;
         sprite_offset = new Vector2(world.GetLength(0) / 2, world.GetLength(1) / 2);
         for (int i = 0; i < initial_herbivores.Count; i++)
@@ -34,6 +42,62 @@ public class WorldManager : MonoBehaviour {
         for (int i = 0; i < initial_carnivores.Count; i++)
         {
             carnies.Add(Carnivore.CreateBasicCarnivore(initial_carnivores[i], sprite_offset, CarnSprite, this.transform));
+        }
+    }
+
+    public void LoadWorld(TerrainTile[,] tiles, List<Herbivore> herbivores, List<Carnivore> carnivores)
+    {
+        world = tiles;
+        sprite_offset = new Vector2(world.GetLength(0) / 2, world.GetLength(1) / 2);
+        herbies = herbivores;
+        carnies = carnivores;
+
+        for (int x = 0; x < world.GetLength(0); x++)
+        {
+            for (int y = 0; y < world.GetLength(1); y++)
+            {
+                GameObject sprite = null;
+                switch (world[x,y].type)
+                {
+                    case TerrainTile.TerrainType.MAINLAND:
+                        sprite = LandSprite;
+                        break;
+                    case TerrainTile.TerrainType.COAST:
+                        sprite = CoastSprite;
+                        break;
+                    case TerrainTile.TerrainType.SHALLOWOCEAN:
+                        sprite = ShallowSprite;
+                        break;
+                    case TerrainTile.TerrainType.OCEAN:
+                        sprite = OceanSprite;
+                        break;
+                    default:
+                        sprite = LandSprite;
+                        break;
+                }
+                GameObject tile = GameObject.Instantiate(sprite);
+                tile.transform.parent = this.transform;
+                tile.transform.localPosition = new Vector3((x - sprite_offset.x) * StaticData.size_increment, (y - sprite_offset.y) * StaticData.size_increment, 1);
+
+                float dir = (int)Mathf.Round(Random.Range(1.0f, 4.0f));
+                tile.transform.Rotate(new Vector3(0, 0, dir * 90));
+            }
+        }
+
+        for (int i = 0; i < herbies.Count; i++)
+        {
+            herbies[i].isAlive = true;
+            herbies[i].sprite = GameObject.Instantiate(HerbSprite);
+            herbies[i].sprite.transform.parent = this.transform;
+            herbies[i].MoveTo(herbies[i].location, new Vector2((herbies[i].location.x - sprite_offset.x) * StaticData.size_increment, (herbies[i].location.y - sprite_offset.y) * StaticData.size_increment));
+        }
+
+        for (int i = 0; i < carnies.Count; i++)
+        {
+            carnies[i].isAlive = true;
+            carnies[i].sprite = GameObject.Instantiate(CarnSprite);
+            carnies[i].sprite.transform.parent = this.transform;
+            carnies[i].MoveTo(carnies[i].location, new Vector2((carnies[i].location.x - sprite_offset.x) * StaticData.size_increment, (carnies[i].location.y - sprite_offset.y) * StaticData.size_increment));
         }
     }
 
@@ -72,6 +136,8 @@ public class WorldManager : MonoBehaviour {
     public void RunRound()
     {
         round_count++;
+
+        Debug.Log(herbies.Count);
 
         float current_total_nutrition = 0;
         float current_minimium_nutrition = 100000;
@@ -178,8 +244,6 @@ public class WorldManager : MonoBehaviour {
         current_plants.FeedValue(current_total_nutrition);
         max_herbivores.FeedValue(herbies.Count);
         current_herbivores.FeedValue(herbies.Count);
-
-        current_minimum_plants.FeedValue(current_minimium_nutrition);
     }
 
     List<TerrainTile> SliceOfWorld(List<Vector2> slices_required)
@@ -187,7 +251,7 @@ public class WorldManager : MonoBehaviour {
         List<TerrainTile> return_thing = new List<TerrainTile>();
         for (int i = 0; i < slices_required.Count; i++)
         {
-            if ((int)slices_required[i].x > 0 && (int)slices_required[i].x < world.GetLength(0) && (int)slices_required[i].y > 0 && (int)slices_required[i].y < world.GetLength(1))
+            if ((int)slices_required[i].x >= 0 && (int)slices_required[i].x < world.GetLength(0) && (int)slices_required[i].y >= 0 && (int)slices_required[i].y < world.GetLength(1))
             {
                 return_thing.Add(world[(int)slices_required[i].x, (int)slices_required[i].y]);
             }
